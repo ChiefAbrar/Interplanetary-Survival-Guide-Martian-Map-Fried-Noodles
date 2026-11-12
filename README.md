@@ -24,6 +24,17 @@ It is important to distinguish between measurements calculated from real data an
 
 The radiation, environmental, and resource calculations are estimates. They should not be interpreted as predictions of actual astronaut safety.
 
+## Screenshots
+
+### Mars Globe
+![Mars Globe](screenshots/3.png)
+
+### Jezero Crater Exploration & Route Planning
+![Jezero Map](screenshots/1.png)
+
+### Mission Control
+![Mission Control](screenshots/2.png)
+
 ## Features
 
 ### Mars exploration
