@@ -3,6 +3,7 @@ require_relative "boot"
 require "rails"
 require "action_controller/railtie"
 require "action_view/railtie"
+require "uri"
 
 Bundler.require(*Rails.groups)
 
@@ -20,14 +21,28 @@ module MarsSurvival
     config.public_file_server.headers = { "Cache-Control" => "public, max-age=3600" }
 
     # Security headers. The page needs: its own JS/CSS, the optional GeoTIFF
-    # library from jsDelivr, and the optional NASA HiRISE DTM download.
+    # library from jsDelivr, the optional NASA HiRISE DTM download, and NASA Mars Trek WMTS tiles.
+    ctx_tile_base_url = ENV.fetch("CTX_TILE_BASE_URL", "").strip
+    ctx_tile_origin = if ctx_tile_base_url.empty?
+      nil
+    else
+      uri = URI.parse(ctx_tile_base_url)
+      unless uri.is_a?(URI::HTTPS) && uri.host && !uri.userinfo && !uri.query && !uri.fragment
+        raise ArgumentError, "CTX_TILE_BASE_URL must be an absolute HTTPS URL without credentials, query, or fragment."
+      end
+      uri.port == 443 ? "https://#{uri.host}" : "https://#{uri.host}:#{uri.port}"
+    end
+
+    connect_sources = ["'self'", "https://trek.nasa.gov", "https://astro.arcgis.com", "https://www.uahirise.org"]
+    connect_sources << ctx_tile_origin if ctx_tile_origin
+
     csp = [
       "default-src 'self'",
       "script-src 'self' https://cdn.jsdelivr.net",
       "style-src 'self' 'unsafe-inline'",
-      "img-src 'self' data: blob:",
+      "img-src 'self' data: blob: https://trek.nasa.gov https://astro.arcgis.com",
       "font-src 'self' data:",
-      "connect-src 'self' https://www.uahirise.org",
+      "connect-src #{connect_sources.join(' ')}",
       "object-src 'none'",
       "base-uri 'self'",
       "form-action 'self'",

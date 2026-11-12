@@ -8,6 +8,7 @@ export class TerrainError extends Error {
 }
 
 const RAD = Math.PI / 180;
+const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
 
 /**
  * @param {object} o
@@ -56,9 +57,10 @@ export function computeSlope(t) {
     let sx = 0, wx = 0, sy = 0, wy = 0;
     for (let k = -1; k <= 1; k++) {
       const wt = k === 0 ? 2 : 1, j2 = j + k;
-      if (ok(i + 1, j2) && ok(i - 1, j2)) { sx += wt * (at(t, i + 1, j2) - at(t, i - 1, j2)) / (2 * cellX); wx += wt; }
-      else if (ok(i + 1, j2) && ok(i, j2)) { sx += wt * (at(t, i + 1, j2) - at(t, i, j2)) / cellX; wx += wt; }
-      else if (ok(i - 1, j2) && ok(i, j2)) { sx += wt * (at(t, i, j2) - at(t, i - 1, j2)) / cellX; wx += wt; }
+      const dxm = cellSpacingX(t, j2);
+      if (ok(i + 1, j2) && ok(i - 1, j2)) { sx += wt * (at(t, i + 1, j2) - at(t, i - 1, j2)) / (2 * dxm); wx += wt; }
+      else if (ok(i + 1, j2) && ok(i, j2)) { sx += wt * (at(t, i + 1, j2) - at(t, i, j2)) / dxm; wx += wt; }
+      else if (ok(i - 1, j2) && ok(i, j2)) { sx += wt * (at(t, i, j2) - at(t, i - 1, j2)) / dxm; wx += wt; }
       const i2 = i + k;
       if (ok(i2, j + 1) && ok(i2, j - 1)) { sy += wt * (at(t, i2, j + 1) - at(t, i2, j - 1)) / (2 * cellY); wy += wt; }
       else if (ok(i2, j + 1) && ok(i2, j)) { sy += wt * (at(t, i2, j + 1) - at(t, i2, j)) / cellY; wy += wt; }
@@ -78,7 +80,13 @@ export function computeSlope(t) {
 export function computeSkyView(t, maxRadiusM = 2000) {
   const { width: w, height: h, cellX, cellY } = t;
   const out = new Float32Array(w * h);
-  const step = Math.min(cellX, cellY);
+  const minCos = t.geo?.type === "simple-cylindrical" || t.geo?.type === "equirectangular"
+    ? Math.min(...[0, h - 1].map(row => cellSpacingX(t, row) / cellX)) : 1;
+  const baseStep = Math.min(cellX * minCos, cellY);
+  // A 2 km horizon at 1 m posting would otherwise inspect hundreds of
+  // millions of samples. On fine rasters, stride by two cells for this
+  // illustrative sky-view model; route safety still does not follow from it.
+  const step = baseStep < 50 ? baseStep * 2 : baseStep;
   const nSteps = Math.max(1, Math.min(200, Math.floor(maxRadiusM / step)));
   for (let j = 0; j < h; j++) for (let i = 0; i < w; i++) {
     const z0 = t.z[j * w + i];
@@ -88,7 +96,9 @@ export function computeSkyView(t, maxRadiusM = 2000) {
       const ux = Math.cos(d * Math.PI / 4), uy = Math.sin(d * Math.PI / 4);
       let m = 0; // horizon elevation angle, never below horizontal
       for (let k = 1; k <= nSteps; k++) {
-        const dist = k * step, x = i + (ux * dist) / cellX, y = j + (uy * dist) / cellY;
+        const dist = k * step, row = clamp(Math.round(j), 0, h - 1);
+        const dxm = cellSpacingX(t, row);
+        const x = i + (ux * dist) / dxm, y = j + (uy * dist) / cellY;
         const xi = Math.round(x), yi = Math.round(y);
         if (xi < 0 || yi < 0 || xi >= w || yi >= h) break;
         const zz = t.z[yi * w + xi];
@@ -108,6 +118,18 @@ export const cellIndex = (t, i, j) => j * t.width + i;
 export const cellOf = (t, idx) => [idx % t.width, (idx / t.width) | 0];
 /** Local metric position of the centre of a cell. */
 export const cellCentre = (t, idx) => { const [i, j] = cellOf(t, idx); return { x: (i + .5) * t.cellX, y: (j + .5) * t.cellY }; };
+export function cellSpacingX(t, row) {
+  if (t.geo?.type !== "simple-cylindrical" && t.geo?.type !== "equirectangular") return t.cellX;
+  const lat = localToLatLon(t, 0, (row + .5) * t.cellY).lat;
+  const standardParallel = t.geo.type === "equirectangular" ? t.geo.standardParallelDeg : 0;
+  return t.cellX * Math.cos(lat * RAD) / Math.cos(standardParallel * RAD);
+}
+/** Ground distance between grid positions, accounting for latitude on a simple cylindrical planetary raster. */
+export function horizontalDistance(t, dx, dy, rowA, rowB = rowA) {
+  const xSpacing = cellSpacingX(t, (rowA + rowB) / 2);
+  const x = dx * xSpacing;
+  return Math.hypot(x, dy * t.cellY);
+}
 /** Cell containing local position (x, y) in metres, or -1 if outside the footprint. */
 export function cellAt(t, x, y) {
   const i = Math.floor(x / t.cellX), j = Math.floor(y / t.cellY);
@@ -129,7 +151,7 @@ export function elevationAt(t, x, y) {
 
 /**
  * Latitude/longitude of a local position when the terrain carries an equirectangular georeference:
- * geo = { radiusM, centerLatDeg, centerLonDeg, originXM, originYM }
+ * geo = { radiusM, centerLatDeg, centerLonDeg, originXM, originYM, standardParallelDeg? }
  * originXM/originYM are the projected coordinates (east, north, metres from the projection origin)
  * of the north-west corner of the raster.
  */
@@ -137,12 +159,14 @@ export function localToLatLon(t, x, y) {
   const g = t.geo; if (!g) return null;
   const px = g.originXM + x, py = g.originYM - y;
   const lat = g.centerLatDeg + (py / g.radiusM) / RAD;
-  const lon = g.centerLonDeg + (px / (g.radiusM * Math.cos(g.centerLatDeg * RAD))) / RAD;
+  const cosLat0 = g.type === "simple-cylindrical" ? 1 : Math.cos((g.standardParallelDeg ?? g.centerLatDeg) * RAD);
+  const lon = g.centerLonDeg + (px / (g.radiusM * cosLat0)) / RAD;
   return { lat, lon };
 }
 export function latLonToLocal(t, lat, lon) {
   const g = t.geo; if (!g) return null;
-  const px = (lon - g.centerLonDeg) * RAD * g.radiusM * Math.cos(g.centerLatDeg * RAD);
+  const cosLat0 = g.type === "simple-cylindrical" ? 1 : Math.cos((g.standardParallelDeg ?? g.centerLatDeg) * RAD);
+  const px = (lon - g.centerLonDeg) * RAD * g.radiusM * cosLat0;
   const py = (lat - g.centerLatDeg) * RAD * g.radiusM;
   return { x: px - g.originXM, y: g.originYM - py };
 }

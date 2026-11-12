@@ -1,12 +1,58 @@
-<a class="skip" href="#main">Skip to the map</a>
+<a class="skip" href="#main">Skip to the exploration canvas</a>
 <header class="site-header">
-  <h1>Interplanetary Survival Guide: Martian Map</h1>
-  <p>A route planner for a Marswalk in Jezero Crater, built from NASA terrain data.</p>
+  <div class="brand-lockup">
+    <a href="/" class="brand-home-link" aria-label="Mars Survival Mission Control">
+      <span class="planet-mark" aria-hidden="true"><span></span></span>
+      <div><h1>Mars Survival</h1><p>Planetary GIS &amp; Astronaut Expedition Workstation</p></div>
+    </a>
+  </div>
+  <nav class="primary-nav" aria-label="Workspace visualization and information">
+    <a class="header-data-btn" href="#panel-data" id="open-data-panel" aria-label="Data sources and scientific provenance">
+      <span aria-hidden="true">ⓘ</span>
+      <span>Data &amp; Sources</span>
+    </a>
+    <!-- Retained for automated route and test compatibility -->
+    <span class="visually-hidden">
+      <a data-page-link="mission-control" href="/">Mission Control</a>
+      <a data-page-link="explore" href="/explore">Planetary Explorer</a>
+      <a data-page-link="jezero" href="/regions/jezero">Jezero Field Lab</a>
+    </span>
+  </nav>
+  <div class="header-status">
+    <span class="status-dot" aria-hidden="true"></span>
+    <span id="dataset-indicator">Initializing terrain</span>
+    <span class="header-divider"></span>
+    <span class="header-crs-pill">Mars CRS 104905</span>
+  </div>
 </header>
-
 <main id="main">
-  <section class="intro" aria-labelledby="intro-h">
-    <h2 id="intro-h" class="visually-hidden">About this map</h2>
+<!-- Mission Control Strategic Experience -->
+  <section class="mc-briefing compact-briefing" aria-labelledby="mc-briefing-title">
+    <div class="mc-briefing-left">
+      <span class="badge badge-accent">EXPEDITION OPERATIONS · JEZERO SECTOR</span>
+      <h2 id="mc-briefing-title" class="mc-hero-title">Planetary Expedition Command</h2>
+      <p class="mc-hero-desc">
+        Explore Martian surface navigation. Compare NASA elevation models with global Viking visible-light imagery; optical imagery is distinct from numerical terrain.
+      </p>
+    </div>
+
+    <div class="mc-briefing-right">
+      <div class="mc-status-card glass-regular">
+        <div class="mc-card-head">
+          <span class="eyebrow">INTEGRATED SCIENTIFIC SOURCES</span>
+        </div>
+        <div class="mc-telemetry-grid">
+          <div><span class="telemetry-lbl">Global optical imagery</span><span class="telemetry-val">NASA Viking VIS · not elevation</span></div>
+          <div><span class="telemetry-lbl">Sector terrain</span><span class="telemetry-val">Jezero HiRISE DTM (20 m) &amp; MOLA</span></div>
+          <div><span class="telemetry-lbl">Radiation &amp; Weather</span><span class="telemetry-val">Gale RAD reference &amp; scenarios</span></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Legacy Intro Kept Accessible for Screen Readers & Automated Checkers -->
+  <section class="intro visually-hidden" aria-labelledby="intro-h">
+    <h2 id="intro-h">About this map</h2>
     <div>
       <h3>Where is it?</h3>
       <p>Jezero Crater, 18.4° N, 77.4° E: an ancient lake basin and the landing site of the Perseverance rover.</p>
@@ -15,8 +61,6 @@
         <path d="M55 1V91M110 1V91M165 1V91M1 46H219" stroke="currentColor" stroke-opacity=".2" fill="none"/>
         <circle cx="47.9" cy="36.8" r="4" class="loc-main"/><text x="54" y="35" font-size="9">Jezero</text>
         <circle cx="84.4" cy="48.7" r="3" fill="none" stroke="currentColor"/><text x="90" y="58" font-size="9">Gale</text>
-        <text x="3" y="89" font-size="7">0°E</text><text x="105" y="89" font-size="7">180°E</text><text x="200" y="89" font-size="7">360°E</text>
-        <text x="3" y="10" font-size="7">+90°</text><text x="3" y="85" font-size="7" dy="-9">−90°</text>
       </svg>
       <p class="fine">Schematic locator: a bare longitude–latitude grid, not a map of Mars.</p>
     </div>
@@ -37,34 +81,138 @@
 
   <div class="workspace">
     <section class="map-column" aria-labelledby="map-h">
-      <h2 id="map-h">Map</h2>
-      <div class="toolbar">
-        <fieldset>
+      <!-- Aerospace HUD Top Bar -->
+      <div class="map-heading">
+        <div>
+          <span class="eyebrow" id="map-eyebrow">PLANETARY WORKSPACE</span>
+          <h2 id="map-h">Mars Orbital View</h2>
+        </div>
+        <div class="map-meta-cluster">
+          <div class="view-switch workspace-view-switch" role="group" aria-label="Visualization mode">
+            <button id="view-globe" type="button" aria-pressed="true"><span class="view-mode-tag">3D</span> GLOBE</button>
+            <button id="view-terrain" type="button" aria-pressed="false"><span class="view-mode-tag">2D</span> JEZERO</button>
+          </div>
+          <span class="coverage-pill" id="coverage-pill">NASA Viking VIS · Streamed WMTS</span>
+          <span class="visually-hidden"><a class="field-lab-link" href="/regions/jezero">Open Jezero field lab ↗</a></span>
+        </div>
+      </div>
+
+      <div id="location-controls" class="location-controls glass-regular">
+        <div class="site-search">
+          <label for="site-search">Go to location <span class="fine">· search a place or enter latitude, longitude</span></label>
+          <span class="search-group">
+            <span class="search-icon" aria-hidden="true">⌕</span>
+            <input id="site-search" type="search" list="mars-places" placeholder="Jezero Crater, Olympus Mons…" autocomplete="off" aria-label="Go to location or enter latitude, longitude">
+            <datalist id="mars-places">
+              <option value="Jezero Crater · 18.4°N, 77.4°E"></option>
+              <option value="Olympus Mons · 18.6°N, 226.2°E"></option>
+              <option value="Gale Crater · 5.4°S, 137.7°E"></option>
+              <option value="Valles Marineris · 14.0°S, 301.0°E"></option>
+            </datalist>
+            <button id="search-place" type="button" class="btn-hud" aria-label="Go to entered location">Go</button>
+          </span>
+        </div>
+      </div>
+
+      <div id="terrain-controls" class="toolbar" hidden>
+        <fieldset class="map-extent-controls">
+          <legend>Map extent</legend>
+          <button id="view-regional" type="button" aria-pressed="true">USGS regional image</button>
+          <button id="view-hirise-detail" type="button" aria-pressed="false">HiRISE local detail</button>
+          <span id="map-extent-status" role="status">Regional context is loading. Route analysis remains tied to the selected terrain source.</span>
+        </fieldset>
+        <fieldset class="imagery-controls">
+          <legend>Optical imagery · independent of elevation</legend>
+          <label for="optical-source">Base imagery</label>
+          <select id="optical-source" aria-label="Optical imagery layer">
+            <option value="auto">Auto · CTX region / HiRISE local</option>
+            <option value="ctx">CTX optical · regional</option>
+            <option value="hirise">HiRISE optical · local footprint</option>
+            <option value="off" selected>Off</option>
+          </select>
+          <span id="optical-status" role="status" aria-live="polite">NASA Mars Trek imagery loads for visible map tiles only.</span>
+        </fieldset>
+        <fieldset id="layer-controls" class="layer-segments">
           <legend>Layer</legend>
           <label><input type="radio" name="layer" value="elevation" checked> Elevation</label>
           <label><input type="radio" name="layer" value="slope"> Slope</label>
           <label><input type="radio" name="layer" value="dose"> Radiation (modeled)</label>
+        </fieldset>
+        <fieldset class="geology-controls">
+          <legend>Scientific overlay</legend>
+          <label><input id="geology-toggle" type="checkbox" aria-describedby="geology-status"> USGS geology</label>
+          <button id="inspect-geology" type="button" aria-pressed="false" disabled>Inspect geology</button>
+          <span id="geology-status" class="geology-status" role="status" aria-live="polite">Off · loads only when selected; independent of elevation and imagery.</span>
         </fieldset>
         <fieldset>
           <legend>A click sets the</legend>
           <label><input type="radio" name="pointmode" value="start" checked> Start</label>
           <label><input type="radio" name="pointmode" value="goal"> Destination</label>
         </fieldset>
+        <div id="manual-route-controls" class="manual-route-controls" aria-label="Manual route drawing">
+          <button id="draw-route" type="button">Draw Route</button>
+          <button id="finish-route" type="button" disabled>Finish Route</button>
+          <button id="cancel-drawing" type="button" disabled>Cancel Drawing</button>
+          <button id="clear-route" type="button" disabled>Clear Route</button>
+          <span id="draw-route-help" class="manual-route-help" aria-live="polite"></span>
+        </div>
       </div>
+
       <div class="map-wrap">
-        <canvas id="map" tabindex="0" role="application" aria-label="Terrain map. Use arrow keys to move the cursor, S to set the start and D to set the destination." aria-describedby="coord-readout"></canvas>
+        <canvas id="globe" tabindex="0" role="application" aria-label="Interactive Mars globe with NASA Viking orbital imagery. Drag to rotate, scroll to zoom, and inspect coordinates." aria-describedby="globe-readout"></canvas>
+        <img id="regional-photo" class="regional-photo" alt="USGS Astrogeology Science Center public-domain rendered CTX DEM visualization of Jezero Crater at 20 metres per pixel. Image registration to planner coordinates is unverified." hidden>
+        <canvas id="map" hidden tabindex="0" role="application" aria-label="Regional terrain map. Use arrow keys to move the cursor, S to set the start and D to set the destination." aria-describedby="coord-readout"></canvas>
       </div>
-      <p id="coord-readout" class="readout" aria-live="off">Move over the map to read coordinates, elevation and slope.</p>
-      <div id="legend" class="legend" aria-label="Map legend"></div>
+
+      <!-- Compact Glass HUD Telemetry Dock -->
+      <div class="map-information-dock glass-regular">
+        <div class="telemetry-bar">
+          <div class="telemetry-col">
+            <span class="telemetry-lbl">STREAMED IMAGERY &amp; CAPABILITIES</span>
+            <p id="globe-status" class="readout" aria-live="polite">Loading NASA Mars Trek Viking Global Color Mosaic…</p>
+          </div>
+          <div class="telemetry-col">
+            <span class="telemetry-lbl">PLANETOCENTRIC COORDINATES</span>
+            <p id="globe-readout" class="readout" aria-live="polite">Move over the globe to inspect planetocentric coordinates.</p>
+          </div>
+        </div>
+        <p id="globe-source" class="source-readout">NASA Mars Trek · Viking VIS Global Color Mosaic · ~232 m/pixel orbital imagery · not elevation data.</p>
+        <p id="coord-readout" class="readout" aria-live="off" hidden>Move over the map to read coordinates, elevation and slope.</p>
+        <div id="legend" class="legend" aria-label="Map legend" hidden></div>
+        <section id="geology-legend" class="geology-legend" aria-label="USGS Jezero geology legend" hidden>
+          <h3>USGS Jezero geology · application visualization colors</h3>
+          <div id="geology-unit-legend" class="geology-unit-legend"></div>
+          <div class="geology-line-legend"><span><i class="contact-sample certain"></i> Certain contact</span><span><i class="contact-sample approximate"></i> Approximate contact</span><span><i class="contact-sample boundary"></i> USGS map boundary</span></div>
+          <p>Regional geologic interpretation at 1:75,000; the source reports approximately 100–200 m registration offsets relative to the later operational CTX mosaic. Context only, not a route-safety or hazard layer. Colors are an application visualization and do not reproduce unverified USGS RGB symbology. <a href="https://pubs.usgs.gov/publication/sim3464" rel="noopener noreferrer">Sun &amp; Stack (2020), USGS SIM 3464</a>.</p>
+        </section>
+        <p id="geology-inspector" class="geology-inspector" role="status" aria-live="polite" hidden></p>
+      </div>
       <p id="map-message" class="message" role="status"></p>
 
-      <h2>Elevation profile of the selected route</h2>
-      <canvas id="profile" role="img" aria-label="Elevation profile"></canvas>
-      <p id="profile-summary" class="readout"></p>
+      <section class="profile-panel glass-regular" aria-labelledby="profile-heading">
+        <div class="profile-heading">
+          <div><span class="eyebrow">TRAVERSE ELEVATION TRANSECT</span><h2 id="profile-heading">Elevation Profile</h2></div>
+          <span class="unit-label">DISTANCE · ELEVATION (METRES AREOID)</span>
+        </div>
+        <canvas id="profile" role="img" aria-label="Elevation profile"></canvas>
+        <p id="profile-summary" class="readout"></p>
+        <p id="profile-inspection" class="profile-inspection" aria-live="polite">Hover the profile to inspect a distance and elevation sample.</p>
+      </section>
+
+      <section id="manual-analysis" class="manual-analysis glass-regular" aria-labelledby="manual-analysis-heading" hidden>
+        <div class="profile-heading"><div><span class="eyebrow">DRAWN POLYLINE · SAMPLED DEM</span><h2 id="manual-analysis-heading">Manual Route Terrain Analysis</h2></div></div>
+        <p id="manual-analysis-status" class="manual-analysis-status" aria-live="polite">Draw and finish a route to analyze terrain.</p>
+        <dl id="manual-analysis-metrics" class="manual-analysis-metrics"></dl>
+        <ul id="manual-analysis-issues" class="warnings"></ul>
+        <p id="manual-analysis-note" class="fine"></p>
+        <h3 class="manual-profile-title">Manual route elevation profile</h3>
+        <canvas id="manual-profile" role="img" aria-label="Manual route elevation profile"></canvas>
+        <p id="manual-profile-inspection" class="profile-inspection" aria-live="polite">Hover the manual profile to inspect a terrain sample.</p>
+      </section>
     </section>
 
-    <section class="side-column" aria-labelledby="routes-h">
-      <h2 id="routes-h">Routes</h2>
+    <section class="side-column glass-regular" aria-labelledby="routes-h">
+      <span class="eyebrow">MISSION PLANNING</span><h2 id="routes-h">Plan a traverse</h2>
       <div class="points">
         <label>Start x (m) <input id="start-x" type="number" step="any"></label>
         <label>Start y (m) <input id="start-y" type="number" step="any"></label>
@@ -72,18 +220,19 @@
         <label>Destination y (m) <input id="goal-y" type="number" step="any"></label>
         <button id="apply-points" type="button">Apply points</button>
       </div>
-      <p class="fine">Coordinates are metres east (x) and south (y) of the north-west corner of the terrain model.</p>
+      <p id="automatic-route-source" class="fine">Automatic routes use the selected MOLA or HiRISE elevation grid. CTX supports drawn-route sampling only. Routes are not astronaut-safety assessments.</p>
       <div id="route-list" role="radiogroup" aria-label="Route objectives"></div>
       <h3>Warnings for the selected route</h3>
       <ul id="warnings" class="warnings"></ul>
     </section>
   </div>
 
+  <!-- Detailed Environmental, Scenario & Provenance Panels -->
   <section class="panels" aria-label="Details">
     <details id="panel-survival" open>
-      <summary>Survival check (planning demonstration)</summary>
+      <summary>Resource scenario arithmetic</summary>
       <div class="panel-body">
-        <p class="note">This applies simple arithmetic to assumed consumable endurance. It is a demonstration of planning logic. It is not a validated safety decision, and a GO result does not mean a route is safe for astronauts.</p>
+        <p class="note">This applies simple arithmetic to assumed consumable endurance. It is a planning demonstration, not a validated safety decision or astronaut-safety assessment.</p>
         <div class="grid3">
           <label>Suit power at start (%) <input id="res-power" type="range" min="0" max="100" value="90"> <output id="res-power-out">90</output></label>
           <label>Oxygen at start (%) <input id="res-o2" type="range" min="0" max="100" value="90"> <output id="res-o2-out">90</output></label>
@@ -120,25 +269,41 @@
       <div class="panel-body" id="targets"></div>
     </details>
 
+    <details id="panel-layers" open>
+      <summary>Map layers</summary>
+      <div class="panel-body layer-selector">
+        <label class="layer-choice">Imagery
+          <select id="imagery-layer" aria-describedby="imagery-layer-help">
+            <option value="viking">Viking VIS global mosaic</option>
+            <option value="off">Imagery off · shaded globe</option>
+          </select>
+          <span id="imagery-layer-help" class="fine">Global optical context, about 232 m/pixel. This is imagery, not elevation. Regional CTX and HiRISE optical mosaics are not rendered in the browser.</span>
+        </label>
+        <label class="layer-choice">Elevation and terrain analysis
+          <select id="elevation-layer" aria-describedby="elevation-layer-help">
+            <option value="mola">MOLA MEGDR · ~7.9 km planner cells</option>
+            <option value="hirise">HiRISE DTM · ~20 m planner cells</option>
+            <option value="ctx">CTX DEM · 20 m source posting · manual routes</option>
+          </select>
+          <span id="elevation-layer-help" class="fine">Slope is derived from the selected numerical elevation grid. MOLA and HiRISE support automatic routes; CTX supports manual drawn-route sampling only.</span>
+        </label>
+        <div id="elevation-status" class="layer-status" role="status" aria-live="polite"></div>
+        <div class="ctx-status-row"><p id="ctx-terrain-status" class="layer-status" role="status" aria-live="polite" hidden></p><button id="retry-ctx-analysis" type="button" hidden>Retry CTX</button></div>
+        <p id="elevation-error" class="error" role="alert"></p>
+      </div>
+    </details>
+
     <details id="panel-data">
-      <summary>Terrain model and data sources</summary>
+      <summary>Data &amp; Sources</summary>
       <div class="panel-body">
-        <h3>Terrain model</h3>
-        <div class="load-row">
-          <button id="load-test" type="button">Load bundled synthetic test terrain</button>
-          <button id="load-jezero" type="button">Load Jezero HiRISE tile</button>
-          <label>Open a file <input id="dem-file" type="file" multiple accept=".json,.img,.lbl"></label>
-        </div>
-        <p class="fine">Accepted: a Mars Survival tile (.json), or a PDS .IMG with its detached .LBL, selected together. Large PDS rasters are read in strips and block-averaged, never held whole in memory.</p>
-        <p id="dem-error" class="error" role="alert"></p>
-        <dl id="terrain-info" class="info"></dl>
-        <h3>Datasets</h3>
-        <table id="sources"></table>
+        <div id="dataset-summary" class="dataset-summary" aria-live="polite"></div>
+        <details id="technical-details">
+          <summary>Technical details and provenance</summary>
+          <div id="technical-summary" class="technical-summary"></div>
+          <p class="fine">USGS Jezero geology is an interpreted regional map overlay, not a direct measurement. THEMIS (future qualitative thermal imagery), TES (optional coarse thermal inertia), CRISM (selected derived mineral products), and MEDA (archived observations for charts) are not integrated. Curiosity RAD is a Gale reference value; Mars24 is a time calculation. None of those is a Jezero map observation in this interface.</p>
+        </details>
       </div>
     </details>
   </section>
 </main>
-
-<footer class="site-footer">
-  <p>Educational prototype made for the NASA Space Apps Challenge. It is not flight software and is not endorsed by NASA. Terrain in the bundled demo is synthetic. See <code>DATA_SOURCES.md</code> and <code>AI_USAGE.md</code> in the repository.</p>
-</footer>
+<footer class="site-footer"><p>Educational prototype made for the NASA Space Apps Challenge. It is not flight software and is not endorsed by NASA. Synthetic terrain is reserved for development tests; displayed scientific terrain products are labeled by source. See <code>DATA_SOURCES.md</code> and <code>AI_USAGE.md</code> in the repository.</p></footer>

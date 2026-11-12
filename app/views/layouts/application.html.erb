@@ -3,13 +3,14 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Interplanetary Survival Guide: Martian Map</title>
-<meta name="description" content="Route planner for a Marswalk in Jezero Crater. Elevation and slope come from the loaded terrain model; radiation, temperature and dust are labelled scenarios.">
+<title>Mars Survival — Jezero Terrain &amp; Mission Planning</title>
+<meta name="description" content="Explore Mars imagery and terrain. Compare terrain-aware Mars traverse routes; sources, models and assumptions are identified in the interface.">
+<meta name="ctx-tile-base-url" content="<%= ENV.fetch('CTX_TILE_BASE_URL', '') %>">
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
-<link rel="stylesheet" href="/css/app.css?v=2.0.0">
+<link rel="stylesheet" href="/css/app.css?v=2.1.0">
 </head>
 <body>
 <%= yield %>
-<script type="module" src="/js/app.js?v=2.0.0"></script>
+<script type="module" src="/js/app.js?v=2.1.0"></script>
 </body>
 </html>

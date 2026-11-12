@@ -30,9 +30,15 @@ export function parseTile(text, { sizeBytes = text.length } = {}) {
   let geo = null;
   if (d.geo) {
     const g = d.geo;
-    if (g.type !== "equirectangular" || ![g.radius_m, g.center_lat_deg, g.center_lon_deg, g.origin_x_m, g.origin_y_m].every(Number.isFinite))
-      throw new ImportError("geo must be an equirectangular block with radius_m, center_lat_deg, center_lon_deg, origin_x_m and origin_y_m.", "geo");
+    const common = [g.radius_m, g.center_lat_deg, g.center_lon_deg, g.origin_x_m, g.origin_y_m].every(Number.isFinite);
+    const coverage = g.type === "simple-cylindrical" && [g.min_lat_deg, g.max_lat_deg, g.min_lon_deg, g.max_lon_deg].every(Number.isFinite);
+    if (!common || !(g.type === "equirectangular" || coverage))
+      throw new ImportError("geo must provide a supported projection, radius, centre, and projected origin.", "geo");
     geo = { radiusM: g.radius_m, centerLatDeg: g.center_lat_deg, centerLonDeg: g.center_lon_deg, originXM: g.origin_x_m, originYM: g.origin_y_m };
+    if (g.type === "simple-cylindrical") Object.assign(geo, { type: g.type, minLatDeg: g.min_lat_deg, maxLatDeg: g.max_lat_deg,
+      minLonDeg: g.min_lon_deg, maxLonDeg: g.max_lon_deg, planetocentric: g.planetocentric === true });
+    if (g.type === "equirectangular" && Number.isFinite(g.standard_parallel_deg)) Object.assign(geo, { type: g.type, standardParallelDeg: g.standard_parallel_deg,
+      minLatDeg: g.min_lat_deg, maxLatDeg: g.max_lat_deg, minLonDeg: g.min_lon_deg, maxLonDeg: g.max_lon_deg, planetocentric: g.planetocentric === true });
   }
   const terrain = createTerrain({ width, height, cellX: d.cell_x_m, cellY: d.cell_y_m, z, geo,
     meta: { name: d.name || "Unnamed tile", kind: d.kind || "unknown", source: d.source || null, notes: d.notes || [] } });
@@ -65,17 +71,25 @@ export function parsePdsLabel(text) {
   const t = text.slice(0, end);
   const lines = labelNumber(t, "LINES"), samples = labelNumber(t, "LINE_SAMPLES");
   if (!lines || !samples) throw new ImportError("PDS label does not give LINES and LINE_SAMPLES.", "label");
+  const productId = labelValue(t, "PRODUCT_ID")?.replace(/[\"']/g, "") || null;
   const bits = labelNumber(t, "SAMPLE_BITS") ?? 32;
   const type = (labelValue(t, "SAMPLE_TYPE") || "PC_REAL").replace(/["<>]/g, "");
-  if (bits !== 32 || !/REAL/i.test(type)) throw new ImportError(`Unsupported sample format (${bits}-bit ${type}). Only 32-bit floating-point elevation rasters are supported.`, "format");
-  const scale = labelNumber(t, "MAP_SCALE");
-  if (!(scale > 0)) throw new ImportError("PDS label has no MAP_SCALE (metres per pixel), so physical distances cannot be defined.", "scale");
+  const isMola = productId?.replace(/\.IMG$/i, "").toUpperCase() === "MEGT44N000HB";
+  if (isMola ? (bits !== 16 || !/^MSB_INTEGER$/i.test(type)) : (bits !== 32 || !/REAL/i.test(type)))
+    throw new ImportError(`Unsupported sample format (${bits}-bit ${type}). Supports 32-bit floating-point PDS terrain and the supplied 16-bit MOLA MEGDR product.`, "format");
+  let scale = labelNumber(t, "MAP_SCALE");
+  if (!(scale > 0)) throw new ImportError("PDS label has no MAP_SCALE, so physical distances cannot be defined.", "scale");
+  if (isMola && /KM\s*\/\s*PIXEL/i.test(labelValue(t, "MAP_SCALE") || "")) scale *= 1000;
   const ptr = labelValue(t, "^IMAGE") || "";
   const ptrNum = ptr.match(/^\(?[^()]*?,\s*(\d+)\s*\)?$/) || ptr.match(/^(\d+)$/);
   const radiusKm = labelNumber(t, "A_AXIS_RADIUS");
   const proj = (labelValue(t, "MAP_PROJECTION_TYPE") || "").replace(/["']/g, "").toUpperCase();
+  const mapResolution = labelNumber(t, "MAP_RESOLUTION");
   const meta = {
-    lines, samples, mapScaleM: scale,
+    lines, samples, mapScaleM: scale, sampleBits: bits,
+    productId,
+    mission: labelValue(t, "SPACECRAFT_NAME")?.replace(/[\"']/g, "") || labelValue(t, "INSTRUMENT_HOST_NAME")?.replace(/[\"']/g, "") || null,
+    instrument: labelValue(t, "INSTRUMENT_NAME")?.replace(/[\"']/g, "") || null,
     littleEndian: /^(PC_|LSB_|VAX)/i.test(type),
     recordBytes: labelNumber(t, "RECORD_BYTES") || 0,
     imageRecord: ptrNum ? +ptrNum[1] : null,
@@ -85,7 +99,8 @@ export function parsePdsLabel(text) {
     projection: proj,
     centerLat: labelNumber(t, "CENTER_LATITUDE"), centerLon: labelNumber(t, "CENTER_LONGITUDE"),
     lineOffset: labelNumber(t, "LINE_PROJECTION_OFFSET"), sampleOffset: labelNumber(t, "SAMPLE_PROJECTION_OFFSET"),
-    radiusM: radiusKm ? radiusKm * 1000 : null
+    radiusM: radiusKm ? radiusKm * 1000 : null,
+    isMola, mapResolution
   };
   // Georeference (equirectangular). Pixel centres are 1-based: x = (sample − 1 − SAMPLE_PROJECTION_OFFSET)·scale,
   // y = (LINE_PROJECTION_OFFSET + 1 − line)·scale. Uncertainty from this convention is at most one pixel.
@@ -93,6 +108,23 @@ export function parsePdsLabel(text) {
     ? { radiusM: meta.radiusM, centerLatDeg: meta.centerLat, centerLonDeg: meta.centerLon,
         originXM: -(meta.sampleOffset + .5) * scale, originYM: (meta.lineOffset + .5) * scale }
     : null;
+  if (isMola) {
+    const minLat = labelNumber(t, "MINIMUM_LATITUDE"), maxLat = labelNumber(t, "MAXIMUM_LATITUDE");
+    const minLon = labelNumber(t, "WESTERNMOST_LONGITUDE"), maxLon = labelNumber(t, "EASTERNMOST_LONGITUDE");
+    if (proj !== "SIMPLE CYLINDRICAL" || !/^EAST$/i.test((labelValue(t, "POSITIVE_LONGITUDE_DIRECTION") || "").replace(/[\"']/g, "")) ||
+        !/^METER$/i.test((labelValue(t, "UNIT") || "").replace(/[\"']/g, "")) || meta.recordBytes !== samples * 2 || !(mapResolution > 0) ||
+        !/PLANETOCENTRIC/i.test(labelValue(t, "COORDINATE_SYSTEM_NAME") || "") ||
+        ![minLat, maxLat, minLon, maxLon, meta.radiusM, meta.centerLon, meta.centerLat, meta.lineOffset, meta.sampleOffset].every(Number.isFinite))
+      throw new ImportError("MOLA label lacks the supported simple-cylindrical east-positive coverage metadata.", "projection");
+    const expectedScale = 2 * Math.PI * meta.radiusM / (360 * mapResolution);
+    if (Math.abs(scale - expectedScale) / expectedScale > 0.005) throw new ImportError("MOLA MAP_SCALE is inconsistent with its reference radius and MAP_RESOLUTION.", "scale");
+    const RAD = Math.PI / 180;
+    meta.geo = { type: "simple-cylindrical", radiusM: meta.radiusM, centerLatDeg: meta.centerLat, centerLonDeg: meta.centerLon,
+      originXM: (0.5 - meta.sampleOffset) / mapResolution * RAD * meta.radiusM,
+      originYM: (meta.lineOffset - 0.5) / mapResolution * RAD * meta.radiusM,
+      minLatDeg: minLat, maxLatDeg: maxLat, minLonDeg: minLon, maxLonDeg: maxLon,
+      planetocentric: /PLANETOCENTRIC/i.test(labelValue(t, "COORDINATE_SYSTEM_NAME") || "") };
+  }
   return meta;
 }
 
@@ -124,7 +156,47 @@ export async function readPdsDownsampled(img, meta, { detached = true, maxCells 
   }
   const geo = meta.geo ? { ...meta.geo } : null; // origin stays at the north-west corner of the retained area
   return createTerrain({ width: w, height: h, cellX: meta.mapScaleM * factor, cellY: meta.mapScaleM * factor, z: out, geo,
-    meta: { name: "HiRISE DTM (downsampled in browser)", kind: "derived-from-nasa", downsampleFactor: factor, nativeWidth: samples, nativeHeight: lines, nativeCellM: meta.mapScaleM, source: null, notes: [`Block-averaged ${factor} × ${factor}; blocks with under half valid pixels are no-data.`], targets: [] } });
+    meta: { name: "PDS DTM (downsampled in browser)", kind: "derived-from-nasa", downsampleFactor: factor, nativeWidth: samples, nativeHeight: lines, nativeCellM: meta.mapScaleM,
+      source: { product_id: meta.productId, mission: meta.mission, instrument: meta.instrument,
+        credit: "Use the data producer and product documentation identified by the selected PDS label.",
+        processing: [`Read ${meta.lines} × ${meta.samples} PDS3 32-bit floating-point samples at ${meta.mapScaleM} m/pixel.`, `Applied SCALING_FACTOR=${meta.scalingFactor} and OFFSET=${meta.offset}.`, `Block-averaged ${factor} × ${factor}; blocks with under half valid pixels are no-data.`] },
+      notes: [], targets: [] } });
+}
+
+/** Read/downsample the supplied MOLA MEGDR int16 raster, keeping only one row block in memory. */
+export async function readMolaDownsampled(img, meta, { detached = true, maxCells = LIMITS.maxPlannerCells, onProgress = () => {} } = {}) {
+  if (!meta.isMola || meta.sampleBits !== 16) throw new ImportError("This is not a supported MOLA MEGDR label.", "format");
+  const { lines, samples, recordBytes } = meta;
+  const base = detached ? (meta.imageRecord && recordBytes ? (meta.imageRecord - 1) * recordBytes : 0) : recordBytes * ((meta.imageRecord || 1) - 1);
+  const expected = base + lines * recordBytes;
+  if (img.size < expected) throw new ImportError(`The MOLA IMG is ${img.size} bytes but the label describes ${expected}. It may be truncated or the label may belong to another file.`, "truncated");
+  const factor = Math.max(1, Math.ceil(Math.sqrt((lines * samples) / maxCells)));
+  const width = Math.floor(samples / factor), height = Math.floor(lines / factor);
+  if (width < 3 || height < 3) throw new ImportError("MOLA raster is too small after downsampling.", "dimensions");
+  const z = new Float32Array(width * height);
+  for (let y = 0; y < height; y++) {
+    const bytes = await img.slice(base + y * factor * recordBytes, base + (y + 1) * factor * recordBytes).arrayBuffer();
+    const view = new DataView(bytes), sums = new Float64Array(width), counts = new Uint32Array(width);
+    for (let row = 0; row < factor; row++) for (let col = 0; col < width * factor; col++) {
+      const v = view.getInt16((row * samples + col) * 2, false);
+      if (v === -32768) continue;
+      const x = (col / factor) | 0; sums[x] += v; counts[x]++;
+    }
+    for (let x = 0; x < width; x++) z[y * width + x] = counts[x] >= Math.ceil(factor * factor / 2) ? sums[x] / counts[x] : NaN;
+    if (y % 16 === 0) { onProgress(y / height); await new Promise(resolve => setTimeout(resolve)); }
+  }
+  const g = meta.geo;
+  const cellM = 2 * Math.PI * g.radiusM / (360 * meta.mapResolution) * factor;
+  const geo = { ...g, minLatDeg: g.maxLatDeg - height * factor / meta.mapResolution,
+    maxLonDeg: g.minLonDeg + width * factor / meta.mapResolution };
+  return createTerrain({ width, height, cellX: cellM, cellY: cellM, z, geo,
+    meta: { name: "MOLA MEGDR median topography — MEGT44N000HB", kind: "derived-from-nasa", downsampleFactor: factor,
+      nativeWidth: samples, nativeHeight: lines, nativeCellM: meta.mapScaleM,
+      source: { product_id: meta.productId, mission: meta.mission, instrument: meta.instrument,
+        url: "https://pds-geosciences.wustl.edu/mgs/mgs-m-mola-5-megdr-l3-v1/mgsl_300x/meg128/",
+        credit: "NASA / MGS MOLA Science Team / PDS Geosciences Node",
+        processing: [`Decoded ${lines} × ${samples} big-endian signed int16 elevation samples in metres.`, `Downsampled ${factor} × ${factor}; −32768 is treated as no-data.`, "Preserved the label's simple cylindrical projection and planetocentric coverage."] },
+      notes: ["MOLA elevations are topography relative to the MOLA areoid, not planetary radius. Product bins may be interpolated where observations are sparse, as stated in its label.", "Coordinates use the product's planetocentric latitude and simple cylindrical projection; east-west ground distances and slope are corrected by cos(latitude)."], targets: [] } });
 }
 
 /** Load one or more user-selected files. Returns { terrain, description }. */
@@ -141,7 +213,9 @@ export async function loadDemFiles(files, { onProgress } = {}) {
       if (!/^\s*LINES\s*=/m.test(labelText)) throw new ImportError("This .IMG has no embedded label. Select the matching .LBL file together with the .IMG.", "label");
     }
     const meta = parsePdsLabel(labelText);
-    const terrain = await readPdsDownsampled(img, meta, { detached, onProgress });
+    if (meta.isMola && img.name.replace(/\.img$/i, "").split(/[\\/]/).pop().toUpperCase() !== meta.productId.replace(/\.IMG$/i, "").toUpperCase())
+      throw new ImportError("The selected MOLA IMG filename does not match PRODUCT_ID in the selected PDS label.", "product-mismatch");
+    const terrain = meta.isMola ? await readMolaDownsampled(img, meta, { detached, onProgress }) : await readPdsDownsampled(img, meta, { detached, onProgress });
     terrain.meta.name = img.name;
     return { terrain };
   }

@@ -1,0 +1,77 @@
+{
+  "schema_version": 1,
+  "dataset_id": "urn:nasa:pds:mars2020_ctx_basemap_2021:data:m20_ctxdem_mosaic",
+  "source": {
+    "filename": "M20_JezeroCrater_CTXDEM_20m.tif",
+    "sha256": "ba7f706ea1b5d63a562f28a7dcf7a7f3c79bce7f048e6974b57e8a33c30d1ba2",
+    "sha256_statement": "Locally computed from the verified original GeoTIFF; not publisher-provided.",
+    "size_bytes": 90345300
+  },
+  "tile_output": {
+    "directory": "data/processed/ctx-jezero",
+    "catalog_filename": "catalog.json",
+    "catalog_sha256": "feddf321254c218739ba5c2287587d2a2d78d4ad8f06be20d4249c9da4f5b727",
+    "tile_count": 99,
+    "grid_rows": 11,
+    "grid_columns": 9,
+    "native_resolution_m": [
+      20.0,
+      20.0
+    ],
+    "maximum_cells_per_tile_including_halo": 250000,
+    "halo_width_cells": 1,
+    "core_cell_count": 22578552,
+    "tile_binary_storage_bytes": 90996256,
+    "json_metadata_storage_bytes": 575738,
+    "total_output_storage_bytes": 91571994
+  },
+  "core_elevation_statistics": {
+    "units": "m",
+    "valid_pixel_count": 22564575,
+    "invalid_pixel_count": 13977,
+    "source_nodata_sentinel_count": 13977,
+    "source_nonfinite_count": 0,
+    "valid_minimum_m": -3504.645263671875,
+    "valid_maximum_m": -475.8408203125,
+    "statistics_computed_locally_from_source_and_tile_cores": true,
+    "not_publisher_provided": true
+  },
+  "performance": {
+    "extraction_seconds": 2.12,
+    "tiles_per_second": 46.698113207547166,
+    "core_pixels_per_second": 10650260.37735849,
+    "estimated_source_bytes_read": 816036192,
+    "source_block_shape_rows_columns": [
+      1,
+      4456
+    ],
+    "source_compression": "none",
+    "source_read_note": "Each tile window intersects one-row full-width strips; neighboring column windows can reread strips. Estimated from window row counts and strip dimensions; OS/GDAL caching may reduce physical I/O.",
+    "memory_note": "Extractor windows are at most 500x500 Float32 cells; value and mask arrays require a few MiB at most, excluding Rasterio/GDAL cache. Peak resident memory was not instrumented."
+  },
+  "halo_validation": {
+    "neighbor_relationships_checked": 178,
+    "shared_cells_compared": 170832,
+    "horizontal_and_vertical_pairs_all_match": true,
+    "valid_samples_nan_masks_and_projected_coordinates_match": true
+  },
+  "validation_date_utc": "2026-11-11T16:21:34.444462Z",
+  "checks": {
+    "source_sha256_matches_download_provenance": true,
+    "source_metadata_matches_manifest_and_pds4": true,
+    "all_99_tile_binaries_have_expected_size_dtype_and_sha256": true,
+    "all_tiles_within_250000_cell_budget": true,
+    "little_endian_float32_and_no_data_to_nan_conversion": true,
+    "every_core_matches_source_samples_without_interpolation": true,
+    "all_22578552_source_cells_owned_exactly_once": true,
+    "all_geotransforms_projected_and_geographic_bounds_match_source_affine": true,
+    "all_tile_crs_params_include_radius_3396190_m": true,
+    "all_178_neighbor_overlaps_match_values_nan_masks_and_coordinates": true,
+    "aggregate_source_and_core_valid_invalid_counts_and_elevation_extrema_match": true
+  },
+  "limitations": [
+    "Complete-mosaic vertical datum/reference surface and numeric elevation accuracy are unspecified in inspected metadata.",
+    "USGS catalog lists 3,396,160 m radius while the PDS4 label and embedded GeoTIFF specify 3,396,190 m; discrepancy remains unresolved.",
+    "Tiles are preprocessing data; browser multi-tile loading is not implemented by this task."
+  ]
+}

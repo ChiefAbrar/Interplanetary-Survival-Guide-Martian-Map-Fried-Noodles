@@ -1,0 +1,4 @@
+-r tools/requirements.txt
+playwright==1.65.0
+greenlet==3.5.6
+rasterio==1.4.4

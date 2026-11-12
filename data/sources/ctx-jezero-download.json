@@ -1,0 +1,63 @@
+{
+  "dataset_id": "urn:nasa:pds:mars2020_ctx_basemap_2021:data:m20_ctxdem_mosaic",
+  "original_official_url": "https://asc-pds-services.s3.us-west-2.amazonaws.com/mosaic/mars2020_trn/CTX/ScienceInvestigationMaps_JPL/M20_JezeroCrater_CTXDEM_20m.tif",
+  "retrieved_at_utc": "2026-11-11T16:07:02.466661Z",
+  "remote": {
+    "content_length": 90345300,
+    "etag": "\"00327770797a739b1bf9456faa602add-11\"",
+    "last_modified": "Thu, 10 Nov 2022 20:44:38 GMT",
+    "content_type": "image/tiff",
+    "accept_ranges": "bytes"
+  },
+  "local_filename": "M20_JezeroCrater_CTXDEM_20m.tif",
+  "local_sha256": "ba7f706ea1b5d63a562f28a7dcf7a7f3c79bce7f048e6974b57e8a33c30d1ba2",
+  "sha256_statement": "SHA-256 computed locally; it is not a publisher-provided checksum.",
+  "verified_tiff_metadata": {
+    "width": 4456,
+    "height": 5067,
+    "bands": 1,
+    "data_type": "float32",
+    "byte_order": "little-endian",
+    "pixel_size_m": [
+      20.0,
+      20.0
+    ],
+    "projection": "Equirectangular",
+    "latitude_type": "Planetocentric",
+    "longitude_direction": "Positive East",
+    "planetary_radius_m": 3396190.0,
+    "geotransform_gdal_order": [
+      4328999.999999998,
+      20.0,
+      0.0,
+      1143420.0000000028,
+      0.0,
+      -20.0
+    ],
+    "pds4_tiepoint_xy_m": [
+      4328999.999999998,
+      1143420.0000000028
+    ],
+    "nodata": -3.4028234663852886e+38,
+    "scales": [
+      1.0
+    ],
+    "offsets": [
+      0.0
+    ],
+    "crs_proj_parameters": {
+      "proj": "eqc",
+      "lat_ts": 18.4663,
+      "lat_0": 0,
+      "lon_0": 0,
+      "x_0": 0,
+      "y_0": 0,
+      "R": 3396190,
+      "units": "m",
+      "no_defs": true,
+      "radius": 3396190.0
+    }
+  },
+  "verification_result": "passed",
+  "metadata_note": "USGS product catalog lists a 3,396,160 m radius, while the PDS4 label and embedded GeoTIFF CRS specify a 3,396,190 m sphere; this catalog discrepancy remains unresolved."
+}

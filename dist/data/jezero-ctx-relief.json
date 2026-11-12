@@ -1,0 +1,108 @@
+{
+  "format": "mars-survival-ctx-display-relief",
+  "version": 1,
+  "image": "jezero-ctx-relief.png",
+  "dimensions_pixels": [
+    1024,
+    1162
+  ],
+  "source_dataset_id": "urn:nasa:pds:mars2020_ctx_basemap_2021:data:m20_ctxdem_mosaic",
+  "source_raster_sha256": "ba7f706ea1b5d63a562f28a7dcf7a7f3c79bce7f048e6974b57e8a33c30d1ba2",
+  "source_raster_dimensions_pixels": [
+    4456,
+    5067
+  ],
+  "source_raster_transform_gdal_order": [
+    4328999.999999998,
+    20.0,
+    0.0,
+    1143420.0000000028,
+    0.0,
+    -20.0
+  ],
+  "source_crs": {
+    "name": "Equirectangular",
+    "latitude_of_projection_origin_deg": 0,
+    "standard_parallel_deg": 18.4663,
+    "longitude_of_central_meridian_deg": 0,
+    "planetary_radius_m": 3396190,
+    "latitude_type": "Planetocentric",
+    "longitude_direction": "Positive East",
+    "horizontal_coordinate_units": "m"
+  },
+  "coverage_planetocentric_east_positive_deg": {
+    "west": 76.99743706146002,
+    "east": 78.58256332408818,
+    "south": 17.580519910544755,
+    "north": 19.29018700686615
+  },
+  "display_pixel_size_projected_m": [
+    87.03125,
+    87.21170395869191
+  ],
+  "display_elevation_percentile_range_m": [
+    -3095.441650390625,
+    -1459.7489013671875
+  ],
+  "display_color_ramp_rgb": [
+    [
+      62,
+      139,
+      116
+    ],
+    [
+      104,
+      160,
+      111
+    ],
+    [
+      211,
+      192,
+      113
+    ],
+    [
+      153,
+      87,
+      78
+    ],
+    [
+      91,
+      48,
+      45
+    ]
+  ],
+  "display_hillshade": {
+    "method": "four-direction weighted multidirectional hillshade",
+    "lights_azimuth_weight": [
+      [
+        315,
+        0.4
+      ],
+      [
+        45,
+        0.2
+      ],
+      [
+        225,
+        0.2
+      ],
+      [
+        135,
+        0.2
+      ]
+    ],
+    "illumination_range": [
+      0.58,
+      1.12
+    ]
+  },
+  "source_nodata": "transparent; no elevation interpolated into missing cells",
+  "data_role": "visual texture only; image colors are never elevation samples or route-analysis inputs",
+  "attribution": "USGS Astrogeology Science Center; Mars 2020 Science Investigation CTX DEM Mosaic (Calef product record; source mosaic citation in DATA_SOURCES.md). Public domain.",
+  "source_metadata": "https://asc-pds-services.s3.us-west-2.amazonaws.com/mosaic/mars2020_trn/CTX/ScienceInvestigationMaps_JPL/M20_JezeroCrater_CTXDEM_20m.xml",
+  "visual_reference": "USGS Jezero Crater rendered CTX DEM image; reference JPEG has no map georeferencing and was not used as a map texture.",
+  "visual_reference_url": "https://www.usgs.gov/media/images/jezero-crater-0",
+  "visual_reference_image_url": "https://d9-wret.s3.us-west-2.amazonaws.com/assets/palladium/production/s3fs-public/media/images/M20_JezeroCrater_CTXDEM_mosaic_20m.jpg",
+  "image_size_bytes": 1233755,
+  "image_sha256": "c79caf512caa1d01e740b053cc72ea5da451deb65eb227405991888e69b1b212"
+}

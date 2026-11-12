@@ -1,0 +1,43 @@
+{
+  "version": 1,
+  "entry_pages": [
+    "index.html",
+    "explore/index.html",
+    "regions/jezero/index.html"
+  ],
+  "public_assets": [
+    "404.html",
+    "422.html",
+    "500.html",
+    "css/app.css",
+    "data/jezero-hirise-tile.json",
+    "data/jezero-geology.json",
+    "data/jezero-ctx-relief.png",
+    "data/jezero-ctx-relief.json",
+    "data/mola-megt44n000hb.json",
+    "data/test-terrain.json",
+    "favicon.svg",
+    "images/jezero-usgs-ctx-dem.jpg",
+    "js/app.js",
+    "js/ctx-terrain-sampler.js",
+    "js/ctx-tile-format.js",
+    "js/ctx-tile-manager.js",
+    "js/geology.js",
+    "js/layer-state.js",
+    "js/dem-format.js",
+    "js/map-viewport.js",
+    "js/mars-globe.js",
+    "js/mars-locations.js",
+    "js/models.js",
+    "js/optical-wmts.js",
+    "js/routing.js",
+    "js/terrain.js",
+    "js/terrain-rendering.js",
+    "js/wmts.js",
+    "robots.txt"
+  ],
+  "preserved_dist_assets": [
+    "js/mars-globe.js.bak"
+  ],
+  "generated_manifest": ".generated-manifest.json"
+}

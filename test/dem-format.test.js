@@ -1,8 +1,9 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
-import { parseTile, parsePdsLabel, readPdsDownsampled, loadDemFiles, ImportError, LIMITS } from "../public/js/dem-format.js";
+import { parseTile, parsePdsLabel, readPdsDownsampled, readMolaDownsampled, loadDemFiles, ImportError, LIMITS } from "../public/js/dem-format.js";
 import { cellAt, cellCentre, localToLatLon, latLonToLocal, TerrainError } from "../public/js/terrain.js";
+import { planRoute } from "../public/js/routing.js";
 
 const read = p => readFileSync(new URL(p, import.meta.url));
 const testTile = () => parseTile(readFileSync(new URL("../public/data/test-terrain.json", import.meta.url), "utf8"));
@@ -57,9 +58,44 @@ test("oversize files are refused before parsing", () => {
   assert.throws(() => parseTile("{}", { sizeBytes: LIMITS.maxTileBytes + 1 }), e => e.code === "too-large" && /MB/.test(e.message));
 });
 
+test("MOLA MEGDR label and signed big-endian int16 reader preserve values, no-data, and coverage", async () => {
+  const lbl = `PDS_VERSION_ID = PDS3\nPRODUCT_ID = "MEGT44N000HB.IMG"\nSPACECRAFT_NAME = "MARS GLOBAL SURVEYOR"\nINSTRUMENT_NAME = "MARS ORBITER LASER ALTIMETER"\nLINES = 4\nLINE_SAMPLES = 4\nSAMPLE_TYPE = MSB_INTEGER\nSAMPLE_BITS = 16\nUNIT = METER\nRECORD_BYTES = 8\nMAP_SCALE = 17.453 <KM/PIXEL>\nMAP_RESOLUTION = 1 <PIXEL/DEGREE>\nA_AXIS_RADIUS = 1000 <KM>\nMAP_PROJECTION_TYPE = "SIMPLE CYLINDRICAL"\nPOSITIVE_LONGITUDE_DIRECTION = "EAST"\nCENTER_LATITUDE = 0 <DEGREE>\nCENTER_LONGITUDE = 2 <DEGREE>\nMINIMUM_LATITUDE = -2 <DEGREE>\nMAXIMUM_LATITUDE = 2 <DEGREE>\nWESTERNMOST_LONGITUDE = 0 <DEGREE>\nEASTERNMOST_LONGITUDE = 4 <DEGREE>\nCOORDINATE_SYSTEM_NAME = "PLANETOCENTRIC"\nLINE_PROJECTION_OFFSET = 2.5\nSAMPLE_PROJECTION_OFFSET = 2.5\nEND\n`;
+  const meta = parsePdsLabel(lbl);
+  assert.equal(meta.isMola, true); assert.equal(meta.sampleBits, 16); assert.equal(meta.mapScaleM, 17453);
+  assert.equal(meta.geo.type, "simple-cylindrical"); assert.equal(meta.geo.planetocentric, true);
+  const raw = Buffer.alloc(4 * 4 * 2);
+  [11, 12, 13, 14, 21, -32768, 23, 24, 31, 32, 33, 34, 41, 42, 43, 44].forEach((v, i) => raw.writeInt16BE(v, i * 2));
+  const t = await readMolaDownsampled(fileLike("mola.img", raw), meta, { maxCells: 16 });
+  assert.deepEqual(Array.from(t.z.slice(0, 4)), [11, 12, 13, 14]);
+  assert.ok(Number.isNaN(t.z[5])); assert.ok(Math.abs(t.cellX - 17453) < 1);
+  assert.equal(t.meta.source.product_id, "MEGT44N000HB.IMG");
+  assert.equal(t.geo.type, "simple-cylindrical");
+  const imported = await loadDemFiles([fileLike("MEGT44N000HB.IMG", raw), fileLike("MEGT44N000HB.LBL", Buffer.from(lbl))]);
+  assert.equal(imported.terrain.meta.source.instrument, "MARS ORBITER LASER ALTIMETER");
+  await assert.rejects(loadDemFiles([fileLike("wrong.img", raw), fileLike("MEGT44N000HB.LBL", Buffer.from(lbl))]), e => e.code === "product-mismatch");
+});
+
+test("bundled real MOLA tile is numerical, georeferenced, and preserves limited product coverage", () => {
+  const t = parseTile(readFileSync(new URL("../public/data/mola-megt44n000hb.json", import.meta.url), "utf8"));
+  assert.equal(t.meta.source.product_id, "MEGT44N000HB");
+  assert.equal(t.meta.source.mission, "MARS GLOBAL SURVEYOR");
+  assert.equal(t.meta.source.instrument, "MARS ORBITER LASER ALTIMETER");
+  assert.equal(t.geo.type, "simple-cylindrical"); assert.equal(t.geo.planetocentric, true);
+  assert.equal(t.geo.minLonDeg, 0); assert.ok(Math.abs(t.geo.maxLonDeg - 677 * 17 / 128) < 1e-9);
+  assert.ok(Math.abs(t.geo.minLatDeg - (44 - 331 * 17 / 128)) < 1e-9); assert.equal(t.geo.maxLatDeg, 44);
+  assert.ok(t.max > 1000 && t.min < -1000); assert.ok(t.width * t.height <= 250000);
+  const firstCell = localToLatLon(t, t.cellX / 2, t.cellY / 2);
+  assert.ok(Math.abs(firstCell.lon - 17 / (2 * 128)) < 1e-6, `first tile column longitude ${firstCell.lon}`);
+  assert.ok(Math.abs(firstCell.lat - (44 - 17 / (2 * 128))) < 1e-6, `first tile row latitude ${firstCell.lat}`);
+  const { start, goal } = t.meta.defaultRoute;
+  const route = planRoute(t, cellAt(t, start.x, start.y), cellAt(t, goal.x, goal.y), { objective: "shortest", maxSlopeDeg: 25 });
+  assert.ok(route.ok); assert.ok(route.metrics.lengthM < 8000, `default MOLA sample is ${route.metrics.lengthM} m`);
+});
+
 test("PDS label: scale, sentinel and georeference are read", () => {
   const m = parsePdsLabel(read("fixtures/pds_fixture.LBL").toString());
   assert.equal(m.lines, 40); assert.equal(m.samples, 60); assert.equal(m.mapScaleM, 2);
+  assert.equal(m.productId, "FIXTURE_PRODUCT"); assert.equal(m.mission, "FIXTURE_MISSION"); assert.equal(m.instrument, "FIXTURE_INSTRUMENT");
   assert.equal(m.littleEndian, true);
   assert.ok(m.missing < -3.4e38 || m.missing === -3.4028226550889045e+38 || m.missing < -1e38);
   assert.equal(m.radiusM, 3396190);
@@ -104,6 +140,10 @@ test("loadDemFiles: tile, PDS pair, missing label, unsupported type and empty se
   assert.equal(terrain.width, 100);
   const pds = await loadDemFiles([fileLike("a.IMG", read("fixtures/pds_fixture.IMG")), fileLike("a.LBL", read("fixtures/pds_fixture.LBL"))]);
   assert.equal(pds.terrain.meta.name, "a.IMG");
+  assert.equal(pds.terrain.meta.source.product_id, "FIXTURE_PRODUCT");
+  assert.equal(pds.terrain.meta.source.mission, "FIXTURE_MISSION");
+  assert.equal(pds.terrain.meta.source.instrument, "FIXTURE_INSTRUMENT");
+  assert.match(pds.terrain.meta.source.processing.join(" "), /Block-averaged/);
   await assert.rejects(loadDemFiles([fileLike("a.IMG", read("fixtures/pds_fixture.IMG"))]), e => e.code === "label");
   await assert.rejects(loadDemFiles([fileLike("a.tif", "II*")]), e => e.code === "unsupported" && /GeoTIFF/.test(e.message));
   await assert.rejects(loadDemFiles([]), e => e.code === "none");

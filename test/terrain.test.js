@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { createTerrain, TerrainError, cellAt, cellCentre, elevationAt, localToLatLon, latLonToLocal, getSkyView } from "../public/js/terrain.js";
+import { createTerrain, TerrainError, cellAt, cellCentre, elevationAt, localToLatLon, latLonToLocal, getSkyView, horizontalDistance } from "../public/js/terrain.js";
 import { grid, DEG } from "./helpers.js";
 
 const near = (a, b, tol = 1e-3) => assert.ok(Math.abs(a - b) <= tol, `${a} vs ${b}`);
@@ -88,6 +88,40 @@ test("equirectangular georeference converts both ways", () => {
   const a = localToLatLon(t, 0, 0), b = localToLatLon(t, 0, 100);
   near((a.lat - b.lat) * DEG * 3396190, 100, 1e-6);
   assert.equal(localToLatLon(grid(4, 4, 1, 1, () => 0), 1, 1), null);
+});
+
+test("equirectangular standard parallel gives the correct Mars east-west ground distance", () => {
+  const R = 3394839.8133163, parallel = 15 * DEG, cellX = 20;
+  const geo = { type: "equirectangular", radiusM: R, centerLatDeg: 0, centerLonDeg: 77.44,
+    originXM: 0, originYM: R * 18 * DEG, standardParallelDeg: 15 };
+  const t = createTerrain({ width: 5, height: 5, cellX, cellY: 20, z: new Float32Array(25), geo });
+  const lat = localToLatLon(t, 0, 10).lat;
+  near(t.geo.standardParallelDeg, 15);
+  near(horizontalDistance(t, 1, 0, 0), cellX * Math.cos(lat * DEG) / Math.cos(parallel), 1e-9);
+  const ll = localToLatLon(t, 20, 40), back = latLonToLocal(t, ll.lat, ll.lon);
+  near(back.x, 20, 1e-8); near(back.y, 40, 1e-8);
+});
+
+test("simple cylindrical planetary coordinates round-trip and east-west ground spacing shrinks with latitude", () => {
+  const R = 3396000, geo = { type: "simple-cylindrical", radiusM: R, centerLatDeg: 0, centerLonDeg: 180,
+    originXM: -Math.PI * R, originYM: 61 * DEG * R, minLatDeg: 0, maxLatDeg: 61, minLonDeg: 0, maxLonDeg: 90, planetocentric: true };
+  const t = createTerrain({ width: 8, height: 62, cellX: 1000, cellY: DEG * R, z: new Float32Array(496), geo });
+  const ll = localToLatLon(t, 1000, 1000), local = latLonToLocal(t, ll.lat, ll.lon);
+  near(local.x, 1000, 1e-6); near(local.y, 1000, 1e-6);
+  const equator = horizontalDistance(t, 1, 0, 60, 60);
+  const highLatitude = horizontalDistance(t, 1, 0, 0, 0);
+  near(highLatitude / equator, Math.cos(60 * DEG), 0.02);
+});
+
+test("simple cylindrical slope uses latitude-adjusted east-west sample spacing", () => {
+  const R = 3396000, h = 62, w = 8, geo = { type: "simple-cylindrical", radiusM: R, centerLatDeg: 0, centerLonDeg: 180,
+    originXM: -Math.PI * R, originYM: 61 * DEG * R, minLatDeg: 0, maxLatDeg: 61, minLonDeg: 0, maxLonDeg: 90, planetocentric: true };
+  const z = Float32Array.from({ length: w * h }, (_, k) => (k % w) * 100);
+  const t = createTerrain({ width: w, height: h, cellX: 1000, cellY: DEG * R, z, geo });
+  const high = t.slope[2 * w + 3], low = t.slope[60 * w + 3];
+  near(high, Math.atan(0.1 / Math.cos(58.5 * DEG)) / DEG, 0.02);
+  near(low, Math.atan(0.1 / Math.cos(0.5 * DEG)) / DEG, 0.02);
+  assert.ok(high > low);
 });
 
 test("sky view is 1 on flat ground and lower in a pit", () => {

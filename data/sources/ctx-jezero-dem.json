@@ -1,0 +1,93 @@
+{
+  "schema_version": 1,
+  "dataset_id": "urn:nasa:pds:mars2020_ctx_basemap_2021:data:m20_ctxdem_mosaic",
+  "product_title": "Mars 2020 Science Investigation CTX DEM Mosaic",
+  "mission": "Mars Reconnaissance Orbiter",
+  "instrument": "Context Camera (CTX)",
+  "producing_organization": "USGS Astrogeology Science Center",
+  "source_metadata_url": "https://asc-pds-services.s3.us-west-2.amazonaws.com/mosaic/mars2020_trn/CTX/ScienceInvestigationMaps_JPL/M20_JezeroCrater_CTXDEM_20m.xml",
+  "source_product_page": "https://astrogeology.usgs.gov/search/map/mars_2020_science_investigation_ctx_dem_mosaic",
+  "source_raster_url": "https://planetarymaps.usgs.gov/mosaic/mars2020_trn/CTX/ScienceInvestigationMaps_JPL/M20_JezeroCrater_CTXDEM_20m.tif",
+  "publication_date": "2021-10-14",
+  "citation": {
+    "product_record_author": "Fred Calef",
+    "label_citation": "Mangold et al., 2021, Perseverance rover reveals an ancient delta-lake system and flood deposits at Jezero crater, Mars, Science.",
+    "doi": "https://doi.org/10.1126/science.abl4051",
+    "usage_constraint": "USGS product record states public domain and requests citation of authors."
+  },
+  "source_raster": {
+    "width_samples": 4456,
+    "height_lines": 5067,
+    "bands": 1,
+    "data_type": "IEEE754LSBSingle",
+    "sample_format": "IEEE 754 binary32 floating point",
+    "byte_order": "little-endian",
+    "scale": "not specified in the PDS4 label",
+    "offset": "not specified in the PDS4 label",
+    "valid_data_range_m": "unknown; no valid minimum or maximum is supplied in the inspected PDS4 label",
+    "nodata": {
+      "value": -3.4028234663852886e+38,
+      "source_field": "PDS4 Array_3D_Image/Special_Constants/missing_constant"
+    }
+  },
+  "spatial": {
+    "resolution_x_m_per_pixel": 20,
+    "resolution_y_m_per_pixel": 20,
+    "pixel_registration": "upper-left outer corner, from PDS4 cart:upperleft_corner_x/y; sample centers are offset +10 m east and -10 m north from that corner",
+    "geotransform_gdal_order": [
+      4328999.999999998,
+      20,
+      0,
+      1143420.000000003,
+      0,
+      -20
+    ],
+    "projection": {
+      "name": "Equirectangular",
+      "latitude_of_projection_origin_deg": 0,
+      "standard_parallel_deg": 18.4663,
+      "longitude_of_central_meridian_deg": 0,
+      "planetary_radius_m": 3396190,
+      "latitude_type": "Planetocentric",
+      "longitude_direction": "Positive East",
+      "horizontal_coordinate_units": "m"
+    },
+    "coverage_deg": {
+      "west": 76.99743706146,
+      "east": 78.58256332408818,
+      "south": 17.58051991054475,
+      "north": 19.29018700686615,
+      "latitude_type": "Planetocentric",
+      "longitude_direction": "Positive East"
+    }
+  },
+  "vertical": {
+    "units": "m",
+    "reference": "The product record says added DEMs were vertically localized to the Mars MOLA dataset. The inspected PDS4 label does not identify an explicit vertical datum/reference surface for the complete mosaic.",
+    "datum": "unknown / not explicitly stated in inspected metadata",
+    "mola_localization_scope": "Product-level statement; exact per-source mosaic localization details are not stated in the inspected label."
+  },
+  "accuracy": {
+    "horizontal": "Product record: accurate to control net; no numeric error bound is provided.",
+    "vertical": "unknown; no numeric vertical accuracy or complete-mosaic vertical error bound is provided."
+  },
+  "processing_notes": [
+    "PDS4 XML sidecar is the inspected source for raster shape, encoding, missing constant, georeference and coverage.",
+    "USGS product record describes a 20 m/pixel CTX DEM mosaic assembled from stereo pairs; it includes an original TRN DEM and added Ames Stereo Pipeline DEMs.",
+    "The product record says added DEMs were vertically localized to MOLA and some horizontal georeferencing was performed in ArcGIS Pro.",
+    "No raster values were read in this metadata validation; the complete GeoTIFF was not downloaded.",
+    "Application-compatible geo representation is equirectangular with center_lat_deg=0, center_lon_deg=0, standard_parallel_deg=18.4663, origin_x_m=4329000 and origin_y_m=1143420; this is metadata only and has not been run through the terrain importer."
+  ],
+  "verification": {
+    "pds4_label_fixture": "test/fixtures/ctx_jezero_dem.xml",
+    "label_retrieved_at": "2026-11-11",
+    "full_geotiff_downloaded": false,
+    "unverified_fields": [
+      "complete-mosaic vertical datum/reference surface",
+      "numeric vertical accuracy",
+      "numeric horizontal accuracy beyond qualitative control-net statement",
+      "valid elevation minimum and maximum",
+      "whether all source mosaic components share an identical vertical localization operation"
+    ]
+  }
+}

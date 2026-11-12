@@ -1,10 +1,14 @@
 services:
   - type: web
     name: mars-survival
-    runtime: docker
+    runtime: ruby
     plan: free
+    buildCommand: bundle install
+    startCommand: bundle exec puma -C config/puma.rb
     healthCheckPath: /up
     envVars:
+      - key: RAILS_ENV
+        value: production
       - key: SECRET_KEY_BASE
         generateValue: true
       - key: FORCE_SSL

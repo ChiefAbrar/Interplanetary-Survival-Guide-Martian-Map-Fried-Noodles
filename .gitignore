@@ -7,3 +7,13 @@
 .env*
 .vercel
 node_modules
+.venv/
+data/raw/mola/*.img
+data/raw/hirise/*.IMG
+/data/raw/ctx-jezero/*.tif
+/data/raw/ctx-jezero/*.tiff
+/data/raw/ctx-jezero/.M20_JezeroCrater_CTXDEM_20m.tif.download-work/
+/data/processed/ctx-jezero/
+
+# Temporary Stage 4C rollback preservation
+/tmp/stage4c-rollback-backup-20261112/
